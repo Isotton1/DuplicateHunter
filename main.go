@@ -9,6 +9,8 @@ import (
 )
 
 //TODO Organize this mess.
+//     - Make get the bytes of the file and the hash as one func.
+//     - Make fileStack stack local to main.
 
 type fileInfo struct {
 	path string
