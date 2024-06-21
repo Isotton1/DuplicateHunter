@@ -6,11 +6,11 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 //TODO Organize this mess.
-//     - Make get the bytes of the file and the hash as one func.
-//     - Make fileStack stack local to main.
+//     - Make a map of fileInfo and path.
 
 type fileInfo struct {
 	path string
@@ -20,11 +20,8 @@ type fileInfo struct {
 
 var fileStack []fileInfo
 
-const root_dir = "/home/linuxsupremacy/coding/NoMoreDup/"
-
 func main() {
-	fmt.Println(root_dir)
-	fs.WalkDir(os.DirFS(root_dir), ".", newFileInfo)
+	filepath.WalkDir(".", newFileInfo)
 	compareFiles()
 	fmt.Println("finish")
 }
@@ -41,31 +38,30 @@ func compareFiles() {
 }
 
 func newFileInfo(path string, dir fs.DirEntry, err error) error {
-	fmt.Printf("start walk in %s %s \n", root_dir, path)
-	//if is a dir
+	fmt.Printf("start walk in %s%s \n", ".", path)
 	if err != nil {
 		return fs.SkipDir
 	}
-	if dir.IsDir() {
-		fmt.Println("a dir")
-		if dir.Name() == ".." {
-			fmt.Println("skipped")
-			return fs.SkipDir
-		}
-		if dir.Name()[0] == '.' {
-			fmt.Println(". dir")
-			return nil
-		}
-		return fs.WalkDir(os.DirFS(root_dir), dir.Name(), newFileInfo)
+	//skip dot file/dir and don't skip "."
+	if dir.Name()[0] == '.' && len(dir.Name()) > 1 {
+		return fs.SkipDir
 	}
-	//skip dot file.
-	if dir.Name()[0] == '.' {
+	if dir.IsDir() {
 		return nil
 	}
-	//Open file
-	file, err := fs.ReadFile(os.DirFS(root_dir), dir.Name())
+	curFileInfo, err := createFileInfo(path)
 	if err != nil {
 		log.Panic(err)
+	}
+	fileStack = append(fileStack, curFileInfo)
+	return nil
+}
+
+func createFileInfo(path string) (fileInfo, error) {
+	//Open file
+	file, err := fs.ReadFile(os.DirFS("."), path)
+	if err != nil {
+		return fileInfo{}, err
 	}
 	//Create hash
 	hash := sha512.Sum512(file)
@@ -73,11 +69,9 @@ func newFileInfo(path string, dir fs.DirEntry, err error) error {
 	size := len(file)
 	//Add fileInfo to fileStack
 	curFileInfo := fileInfo{
-		path: root_dir + path,
+		path: filepath.Join(".", path),
 		hash: hash,
 		size: size,
 	}
-	fmt.Println(curFileInfo.path)
-	fileStack = append(fileStack, curFileInfo)
-	return nil
+	return curFileInfo, nil
 }
