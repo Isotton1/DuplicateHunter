@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 )
 
-//TODO Organize this mess.
-//     - Make a map of fileInfo and path.
-
+// TODO
+//   - Write -h.
+//   - Implement delete.
 type fileInfo struct {
 	path string
 	hash [64]byte
@@ -20,7 +20,31 @@ type fileInfo struct {
 
 var fileStack []fileInfo
 
+var config struct {
+	delete bool
+	oldest bool
+}
+
 func main() {
+	argv := os.Args
+	argc := len(argv)
+
+	if argc > 2 {
+		for i := 1; i < argc; i++ {
+			switch argv[i] {
+			case "-h":
+				fmt.Println("")
+			case "-d":
+				config.delete = true
+			case "-do":
+				config.delete = true
+				config.oldest = true
+			default:
+				log.Fatal(argv[i] + " is not a valid flag")
+			}
+		}
+	}
+
 	filepath.WalkDir(".", newFileInfo)
 	compareFiles()
 	fmt.Println("finish")
